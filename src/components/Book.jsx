@@ -10,6 +10,7 @@ const Book = () => {
   const backCoverRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [isCoverOpened, setIsCoverOpened] = useState(false);
+  const [isBackCoverOpened, setIsBackCoverOpened] = useState(false);
   const [prevScrollPos, setPrevScrollPos] = useState(0);
 
   const totalPages = 5;
@@ -22,24 +23,33 @@ const Book = () => {
 
   const openBookCover = () => {
     gsap.to(frontCoverRef.current.rotation, {
-      y: -Math.PI / 2, // Rotate the front cover to the left side (open)
-      duration: 1.5,
+      y: -Math.PI,
+      duration: 1,
       ease: "power2.inOut",
     });
   };
 
   const closeBookCover = () => {
     gsap.to(frontCoverRef.current.rotation, {
-      y: 0, // Return the cover to its original position (close)
-      duration: 1.5,
+      y: 0,
+      duration: 1,
       ease: "power2.inOut",
     });
   };
 
+  const openBackCover = () => {
+    gsap.to(backCoverRef.current.rotation, {
+      y: 0,
+      duration: 1,
+      ease: "power2.inOut",
+    });
+    setIsBackCoverOpened(true);
+  };
+
   const closeBackCover = () => {
     gsap.to(backCoverRef.current.rotation, {
-      y: 0, // Close the back cover at the end
-      duration: 1.5,
+      y: -Math.PI,
+      duration: 1.2,
       ease: "power2.inOut",
     });
   };
@@ -48,7 +58,7 @@ const Book = () => {
     const page = pagesRef.current[pageIndex];
     if (page) {
       gsap.to(page.rotation, {
-        y: -Math.PI,
+        y: -Math.PI / 2,
         duration: 1,
         ease: "power2.inOut",
       });
@@ -70,11 +80,12 @@ const Book = () => {
     const scrollPosition = window.scrollY;
     const maxScroll =
       document.documentElement.scrollHeight - window.innerHeight;
-    const scrollFraction = scrollPosition / maxScroll;
+
+    const scrollHeightPerPage = maxScroll / (totalPages + 1);
 
     const newPage = Math.min(
-      totalPages - 1,
-      Math.floor(scrollFraction * (totalPages + 2))
+      totalPages,
+      Math.floor((scrollPosition - 50) / scrollHeightPerPage)
     );
 
     const scrollDirection = scrollPosition > prevScrollPos ? "down" : "up";
@@ -85,15 +96,24 @@ const Book = () => {
     }
 
     if (isCoverOpened) {
-      if (scrollDirection === "down" && newPage > currentPage) {
-        flipPageForward(currentPage);
-        setCurrentPage(newPage);
-      } else if (scrollDirection === "up" && newPage < currentPage) {
-        flipPageBackward(currentPage - 1);
-        setCurrentPage(newPage);
+      if (scrollDirection === "down") {
+        if (newPage > currentPage) {
+          flipPageForward(currentPage);
+          setCurrentPage(newPage);
+        }
+      } else if (scrollDirection === "up") {
+        if (currentPage === totalPages && !isBackCoverOpened) {
+          console.log("abc");
+          openBackCover();
+        } else if (newPage < currentPage) {
+          console.log("bcd");
+          flipPageBackward(currentPage - 1);
+          setCurrentPage(newPage);
+        }
       }
     }
-    if (newPage === totalPages - 1 && scrollDirection === "down") {
+
+    if (newPage === totalPages && scrollDirection === "down") {
       flipPageForward(newPage);
       closeBackCover();
     }
@@ -101,12 +121,12 @@ const Book = () => {
     if (scrollPosition <= 50) {
       closeBookCover();
       setIsCoverOpened(false);
+      setIsBackCoverOpened(false);
       setCurrentPage(0);
     }
 
     setPrevScrollPos(scrollPosition);
   };
-
   useEffect(() => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -115,26 +135,28 @@ const Book = () => {
   return (
     <group position={[0, -2, 0]}>
       <BookCover
-        position={[0, 2, -0.05]}
+        position={[-2, 2, -0.05]}
         color="brown"
         text="End"
         ref={backCoverRef}
+        isBackCover={true}
       />
 
       {[...Array(totalPages)].map((_, i) => (
         <BookPage
           key={i}
-          position={[0, 2, i * 0.02]}
+          position={[-2, 2, i * 0.02]}
           rotation={[0, 0, 0]}
           ref={addToPagesRef}
         />
       ))}
 
       <BookCover
-        position={[0, 2, 0.05]}
+        position={[-2, 2, 0.05]}
         rotation={[0, 0, 0]}
         color="brown"
         text="Start"
+        isBackCover={false}
         ref={frontCoverRef}
       />
     </group>
